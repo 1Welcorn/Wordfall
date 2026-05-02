@@ -75,6 +75,21 @@ export default function App() {
     const utterance = new SpeechSynthesisUtterance(word);
     utterance.lang = 'en-US';
     utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    // Try to find a natural-sounding voice (Google US English usually sounds good on Chrome, Alex is okay on Mac)
+    const voices = window.speechSynthesis.getVoices();
+    const goodVoices = voices.filter(v => 
+      v.lang.startsWith('en') && 
+      !v.name.toLowerCase().includes('robot') && 
+      !v.name.toLowerCase().includes('novelty')
+    );
+    // Find a specific good one if available
+    const bestVoice = goodVoices.find(v => v.name.includes('Google US English')) || goodVoices[0];
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   }, [soundEnabled]);
 
@@ -241,11 +256,11 @@ export default function App() {
     
     try {
       const nameToSave = playerName.trim() || 'Jogador';
-      const saved = JSON.parse(localStorage.getItem('wordfall_scores') || '[]');
+      const saved = JSON.parse(localStorage.getItem('wordfall_scores_kids') || '[]');
       const updated = [...saved, { username: nameToSave, score: scoreRef.current }];
       updated.sort((a,b) => b.score - a.score);
       const top3 = updated.slice(0, 3);
-      localStorage.setItem('wordfall_scores', JSON.stringify(top3));
+      localStorage.setItem('wordfall_scores_kids', JSON.stringify(top3));
       setHighScores(top3);
       setScoreSaved(true);
     } catch {
@@ -256,7 +271,7 @@ export default function App() {
   // Load Highscores on mount
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('wordfall_scores') || '[]');
+      const saved = JSON.parse(localStorage.getItem('wordfall_scores_kids') || '[]');
       setHighScores(saved.slice(0, 3)); // show top 3 in menu
     } catch {
       // ignore
@@ -270,31 +285,33 @@ export default function App() {
   };
 
   return (
-    <div className="h-[100dvh] w-full bg-slate-900 overflow-hidden relative font-sans select-none" style={{ backgroundImage: 'radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%)' }}>
+    <div className="h-[100dvh] w-full bg-sky-200 overflow-hidden relative font-sans select-none" style={{ backgroundImage: 'radial-gradient(circle at top, #e0f2fe 0%, #7dd3fc 100%)' }}>
       
       {/* HUD overlays */}
       <div className="absolute top-0 left-0 w-full p-4 md:p-6 z-50 flex justify-between items-center pointer-events-none">
-        <div className="flex gap-4 md:gap-8 items-center pt-2 pl-2">
-          <div className="bg-slate-800/80 backdrop-blur-md rounded-xl p-3 border border-slate-700 shadow-xl flex items-center gap-3">
-            <Trophy className="text-yellow-400" size={24} />
-            <span className="text-white text-2xl font-bold font-mono">{score.toLocaleString()}</span>
+        <div className="flex gap-2 md:gap-4 items-center pt-2 pl-2">
+          <div className="bg-white/90 backdrop-blur-md rounded-full px-5 py-2 md:px-6 md:py-3 border-4 border-white shadow-[0_4px_15px_rgba(3,105,161,0.2)] flex items-center gap-2 md:gap-3">
+            <Trophy className="text-orange-400" size={28} />
+            <span className="text-sky-900 text-3xl font-black font-sans">{score.toLocaleString()}</span>
           </div>
-          <div className="bg-slate-800/80 backdrop-blur-md rounded-xl p-3 border border-slate-700 shadow-xl flex items-center gap-3">
-             <span className="text-orange-400 font-bold text-xl uppercase tracking-widest text-shadow">Combo x{combo}</span>
-          </div>
+          {combo > 1 && (
+            <div className="bg-orange-400 rounded-full px-4 py-2 border-b-4 border-orange-600 shadow-lg flex items-center animate-bounce-slight">
+               <span className="text-white font-black text-xl md:text-2xl tracking-wide">Combo x{combo}!</span>
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-2 md:gap-4 items-center">
           <button 
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="pointer-events-auto bg-slate-800/80 hover:bg-slate-700 p-3 rounded-xl border border-slate-700 text-white transition-colors"
+            className="pointer-events-auto bg-white/90 hover:bg-white p-3 md:p-4 rounded-full border-4 border-white shadow-[0_4px_15px_rgba(3,105,161,0.2)] text-sky-600 transition-transform hover:scale-105 active:scale-95"
           >
-            {soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+            {soundEnabled ? <Volume2 size={28} /> : <VolumeX size={28} />}
           </button>
           
-          <div className={`bg-slate-800/80 backdrop-blur-md rounded-xl p-3 border border-slate-700 shadow-xl flex items-center gap-3 ${timeLeft <= 10 ? 'animate-pulse bg-red-900/50' : ''}`}>
-            <Timer className={timeLeft <= 10 ? "text-red-400" : "text-blue-400"} size={24} />
-            <span className={`text-2xl font-bold font-mono ${timeLeft <= 10 ? 'text-red-400' : 'text-white'}`}>
+          <div className={`bg-white/90 backdrop-blur-md rounded-full px-5 py-2 md:px-6 md:py-3 border-4 border-white shadow-[0_4px_15px_rgba(3,105,161,0.2)] flex items-center gap-2 md:gap-3 ${timeLeft <= 10 ? 'animate-pulse bg-red-100 border-red-300' : ''}`}>
+            <Timer className={timeLeft <= 10 ? "text-red-500" : "text-sky-500"} size={28} />
+            <span className={`text-3xl font-black font-sans ${timeLeft <= 10 ? 'text-red-500' : 'text-sky-900'}`}>
               {formatTime(timeLeft)}
             </span>
           </div>
@@ -329,15 +346,15 @@ export default function App() {
                   y: { duration: word.duration / 1000, ease: 'linear' },
                   exit: { duration: 0.2 }
                 }}
-                className="absolute flex flex-col items-center bg-slate-800/60 backdrop-blur-md border-[2px] border-slate-600/50 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] whitespace-nowrap"
+                className="absolute flex flex-col items-center bg-white border-b-[6px] border-sky-200/60 p-4 md:p-6 rounded-[2rem] shadow-xl whitespace-nowrap"
               >
-                <div className="flex gap-4 items-center justify-center mb-1 w-full border-b border-slate-600/50 pb-2">
-                  <span className="text-xl font-bold text-amber-400" dir="rtl">{word.dari}</span>
-                  <span className="text-slate-500">|</span>
-                  <span className="text-sm font-semibold text-emerald-300 uppercase tracking-wide">{word.pt}</span>
+                <div className="flex gap-3 items-center justify-center mb-2 w-full border-b-[3px] border-sky-100 pb-2">
+                  <span className="text-xl md:text-2xl font-black text-amber-500 drop-shadow-sm" dir="rtl">{word.dari}</span>
+                  <span className="text-sky-300 font-bold">|</span>
+                  <span className="text-base md:text-lg font-black text-emerald-500 uppercase tracking-widest">{word.pt}</span>
                 </div>
-                <div className="text-5xl my-2 drop-shadow-lg">{word.emoji}</div>
-                <div className="text-lg font-mono font-bold text-white tracking-widest">{word.en}</div>
+                <div className="text-6xl md:text-7xl my-2 drop-shadow-xl animate-bounce-slight" style={{ animationDelay: `${Math.random()}s` }}>{word.emoji}</div>
+                <div className="text-2xl md:text-3xl font-black text-sky-900 tracking-wide">{word.en}</div>
               </motion.div>
             );
           })}
@@ -373,15 +390,15 @@ export default function App() {
               }
             }}
             disabled={status !== 'PLAYING'}
-            className={`w-full text-center text-3xl md:text-5xl p-4 md:p-6 bg-slate-800/90 backdrop-blur-xl rounded-3xl border-[3px] 
-              ${shake ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.6)] text-red-100' : 'border-indigo-500/50 text-white focus:border-green-400 focus:shadow-[0_0_40px_rgba(74,222,128,0.4)]'}
-              outline-none transition-all duration-200 placeholder-slate-500 font-mono tracking-widest`}
+            className={`w-full text-center text-3xl md:text-5xl p-4 md:p-6 bg-white rounded-[3rem] border-b-[8px] 
+              ${shake ? 'border-red-400 shadow-[0_0_30px_rgba(248,113,113,0.6)] text-red-500' : 'border-sky-300 text-sky-900 focus:border-green-400 focus:shadow-[0_0_40px_rgba(74,222,128,0.6)]'}
+              outline-none transition-all duration-200 placeholder-sky-200 font-bold tracking-wider`}
             placeholder={status === 'PLAYING' ? "D I G I T E . . ." : ""}
             autoComplete="off"
             autoCorrect="off"
             spellCheck="false"
           />
-          <div className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500/50 text-xl font-bold transition-opacity ${inputValue ? 'opacity-0' : 'opacity-100'}`} dir="rtl">
+          <div className={`absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-sky-200 text-2xl font-black transition-opacity ${inputValue ? 'opacity-0' : 'opacity-100'}`} dir="rtl">
             تایپ کنید...
           </div>
         </motion.div>
@@ -391,51 +408,51 @@ export default function App() {
       <AnimatePresence>
         {status === 'MENU' && (
           <motion.div 
-            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-sky-900/40 backdrop-blur-sm"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
-            <div className="bg-slate-800 border border-slate-700 p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-lg w-full mx-4 max-h-[90vh]">
-              <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-cyan-400 mb-2">WordFall</h1>
-              <div className="text-slate-400 mb-6 text-center">
-                <p>Jogo de Digitação: Inglês & Dari</p>
-                <p dir="rtl" className="text-indigo-300 text-sm mb-1">بازی تایپ: انگلیسی و دری</p>
-                <p>Digite as palavras antes que caiam!</p>
-                <p dir="rtl" className="text-indigo-300 text-sm">کلمات را قبل از افتادن تایپ کنید!</p>
+            <div className="bg-white border-b-8 border-sky-200 p-6 md:p-10 rounded-[3rem] shadow-2xl flex flex-col items-center max-w-lg w-full mx-4 max-h-[90vh]">
+              <h1 className="text-6xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-pink-400 to-orange-400 mb-2 drop-shadow-sm">WordFall</h1>
+              <div className="text-sky-600 mb-6 text-center font-bold">
+                <p className="text-lg">Jogo de Digitação: Inglês & Dari</p>
+                <p dir="rtl" className="text-sky-400 text-sm mb-1">بازی تایپ: انگلیسی و دری</p>
+                <p className="text-lg">Digite as palavras antes que caiam!</p>
+                <p dir="rtl" className="text-sky-400 text-sm">کلمات را قبل از افتادن تایپ کنید!</p>
               </div>
               
               <div className="w-full mb-6 overflow-y-auto pr-2 flex-grow" style={{scrollbarWidth: 'thin'}}>
-                <div className="sticky top-0 bg-slate-800 pb-2 z-10 mb-3 text-center">
-                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-wider">Escolha a Categoria</h3>
-                  <h3 dir="rtl" className="text-indigo-300/80 text-xs mt-1">یک دسته بندی انتخاب کنید</h3>
+                <div className="sticky top-0 bg-white pb-2 z-10 mb-3 text-center">
+                  <h3 className="text-sky-400 text-sm font-black uppercase tracking-wider">Escolha a Categoria</h3>
+                  <h3 dir="rtl" className="text-sky-300 text-xs mt-1 font-bold">یک دسته بندی انتخاب کنید</h3>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   {Object.keys(VOCABULARY_GROUPS).map(cat => (
                     <button
                       key={cat}
                       onClick={() => startGame(cat)}
-                      className="w-full py-3 px-5 bg-slate-700/50 hover:bg-indigo-600/80 text-white rounded-xl text-left font-medium transition-all border border-transparent hover:border-indigo-400 hover:shadow-lg hover:-translate-y-0.5 relative group flex items-center justify-between"
+                      className="w-full py-4 px-6 bg-sky-100 hover:bg-sky-200 text-sky-800 rounded-[2rem] border-b-4 border-sky-300 hover:border-sky-400 text-left font-black text-lg transition-transform hover:-translate-y-1 active:translate-y-0 relative group flex items-center justify-between shadow-sm"
                     >
                       <div className="flex flex-col flex-1">
                         <span>{cat}</span>
-                        <span className="text-xs text-indigo-300/80 mt-0.5 font-bold" dir="rtl">{CATEGORY_TRANSLATIONS[cat]}</span>
+                        <span className="text-sm text-sky-500 mt-0.5 font-bold" dir="rtl">{CATEGORY_TRANSLATIONS[cat]}</span>
                       </div>
-                      <Play size={18} className="opacity-0 group-hover:opacity-100 text-indigo-200 transition-opacity" />
+                      <Play size={24} className="text-pink-400 scale-125 transition-transform group-hover:scale-150 group-hover:rotate-12" fill="currentColor" />
                     </button>
                   ))}
                 </div>
               </div>
 
               {highScores.length > 0 && (
-                <div className="w-full bg-slate-800/80 pt-4 border-t border-slate-700">
+                <div className="w-full bg-slate-50 rounded-3xl p-4 border-2 border-slate-100">
                   <div className="text-center mb-3">
-                    <h3 className="text-slate-500 text-sm font-bold uppercase tracking-wider">Recordes Locais</h3>
-                    <h3 dir="rtl" className="text-indigo-400/60 text-xs mt-1">بهترین امتیازات</h3>
+                    <h3 className="text-orange-400 text-sm font-black uppercase tracking-wider">Top Pontuações</h3>
+                    <h3 dir="rtl" className="text-orange-300 text-xs mt-1 font-bold">بهترین امتیازات</h3>
                   </div>
                   <div className="flex flex-col gap-2">
                     {highScores.map((hs, i) => (
-                      <div key={i} className="flex justify-between bg-slate-700/50 rounded-lg p-2 px-4 shadow-inner">
-                        <span className="text-slate-300">#{i+1} {hs.username}</span>
-                        <span className="text-indigo-300 font-mono font-bold">{hs.score.toLocaleString()}</span>
+                      <div key={i} className="flex justify-between bg-white rounded-2xl p-3 px-5 shadow-sm border border-slate-100">
+                        <span className="text-sky-800 font-bold">#{i+1} {hs.username}</span>
+                        <span className="text-pink-500 font-black">{hs.score.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -447,49 +464,49 @@ export default function App() {
 
         {status === 'GAMEOVER' && (
           <motion.div 
-            className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-md"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-sky-900/60 backdrop-blur-md"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
-            <div className="bg-slate-800 border border-slate-700 p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-md w-full mx-4">
-              <h2 className="text-4xl font-black text-white mb-1 uppercase tracking-widest text-shadow text-center">Fim de Jogo!</h2>
-              <h3 dir="rtl" className="text-xl text-indigo-300 font-bold mb-2">پایان بازی!</h3>
+            <div className="bg-white border-b-8 border-sky-300 p-8 rounded-[3rem] shadow-2xl flex flex-col items-center max-w-md w-full mx-4">
+              <h2 className="text-5xl font-black text-pink-500 mb-1 uppercase tracking-widest text-center">Fim de Jogo!</h2>
+              <h3 dir="rtl" className="text-xl text-sky-400 font-black mb-2">پایان بازی!</h3>
               
-              <div className="flex flex-col items-center my-6 p-6 bg-slate-900 rounded-2xl w-full border border-slate-700 relative overflow-hidden">
+              <div className="flex flex-col items-center my-6 p-6 bg-amber-50 rounded-[2rem] w-full border-4 border-amber-200 relative overflow-hidden">
                 {score > (highScores[0]?.score || 0) && score > 0 && (
                   <motion.div 
                     initial={{ y: -50, opacity: 0 }} 
                     animate={{ y: 0, opacity: 1 }} 
-                    className="absolute top-0 left-0 w-full bg-emerald-500/20 text-emerald-300 py-2 text-center font-bold text-xs uppercase tracking-widest flex flex-col gap-1"
+                    className="absolute top-0 left-0 w-full bg-green-400 text-white py-2 text-center font-black text-sm uppercase tracking-widest flex flex-col gap-1 shadow-sm"
                   >
-                    <span>🎉 NOVO RECORDE PESSOAL! 🎉</span>
+                    <span>🎉 NOVO RECORDE! 🎉</span>
                     <span dir="rtl" className="text-[10px]">رکورد جدید!</span>
                   </motion.div>
                 )}
                 
                 <div className={`flex flex-col items-center ${score > (highScores[0]?.score || 0) && score > 0 ? 'mt-6' : ''}`}>
-                  <span className="text-slate-400 uppercase tracking-widest font-bold text-sm mb-1">Pontuação Final</span>
-                  <span dir="rtl" className="text-indigo-400/70 text-xs mb-3">امتیاز نهایی</span>
+                  <span className="text-amber-600 uppercase tracking-widest font-black text-sm mb-1">Sua Pontuação</span>
+                  <span dir="rtl" className="text-amber-500/70 text-xs mb-3 font-bold">امتیاز نهایی</span>
                 </div>
                 
-                <span className="text-6xl font-mono font-bold text-yellow-400">{score.toLocaleString()}</span>
+                <span className="text-7xl font-black text-orange-500 drop-shadow-sm">{score.toLocaleString()}</span>
                 
-                <div className="mt-4 flex flex-col items-center text-orange-300 font-bold uppercase text-sm">
-                  <span>Combo Máx: x{maxCombo}</span>
-                  <span dir="rtl" className="text-[10px] opacity-80 mt-1">بیشترین کمبو</span>
+                <div className="mt-4 flex flex-col items-center text-amber-500 font-bold uppercase text-sm">
+                  <span>Combo Máximo: x{maxCombo}</span>
+                  <span dir="rtl" className="text-xs opacity-80 mt-1">بیشترین کمبو</span>
                 </div>
               </div>
 
               {!scoreSaved ? (
                 <form onSubmit={saveScore} className="w-full mb-6">
                   <div className="text-center mb-4">
-                    <p className="text-indigo-300 font-medium text-sm">Digite seu nome para o placar:</p>
-                    <p className="text-indigo-300/80 font-medium text-xs mt-1" dir="rtl">نام خود را برای جدول امتیازات وارد کنید:</p>
+                    <p className="text-sky-600 font-bold text-base">Qual é o seu nome?</p>
+                    <p className="text-sky-500 font-bold text-xs mt-1" dir="rtl">نام خود را برای جدول امتیازات وارد کنید:</p>
                   </div>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-500 placeholder:text-sm"
-                      placeholder="Seu nome / نام شما"
+                      className="flex-1 bg-white border-4 border-sky-200 rounded-[2rem] px-5 py-3 text-sky-900 font-bold text-lg focus:outline-none focus:border-sky-400 transition-colors placeholder:text-sky-300"
+                      placeholder="Seu nome"
                       value={playerName}
                       onChange={e => setPlayerName(e.target.value)}
                       maxLength={15}
@@ -497,24 +514,24 @@ export default function App() {
                     />
                     <button 
                       type="submit"
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold transition-colors flex flex-col items-center justify-center gap-1"
+                      className="bg-green-400 hover:bg-green-500 text-white px-6 py-3 rounded-[2rem] border-b-4 border-green-600 font-black transition-colors flex flex-col items-center justify-center gap-1 shadow-sm"
                     >
-                      <span>SALVAR</span>
-                      <span dir="rtl" className="text-[10px] font-normal opacity-80">ثبت</span>
+                      <span className="text-lg">SALVAR</span>
+                      <span dir="rtl" className="text-xs font-bold opacity-90">ثبت</span>
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="w-full mb-6">
+                <div className="w-full mb-6 bg-slate-50 rounded-[2rem] p-4 border-2 border-slate-100">
                   <div className="text-center mb-3">
-                    <h3 className="text-slate-500 text-sm font-bold uppercase tracking-wider">Recordes Locais</h3>
-                    <h3 dir="rtl" className="text-indigo-400/60 text-xs mt-1">بهترین امتیازات</h3>
+                    <h3 className="text-orange-400 text-sm font-black uppercase tracking-wider">Top Pontuações</h3>
+                    <h3 dir="rtl" className="text-orange-300 text-xs mt-1 font-bold">بهترین امتیازات</h3>
                   </div>
                   <div className="flex flex-col gap-2">
                     {highScores.map((hs, i) => (
-                      <div key={i} className="flex justify-between bg-slate-700/50 rounded-lg p-2 px-4 shadow-inner">
-                        <span className="text-slate-300">#{i+1} {hs.username}</span>
-                        <span className="text-indigo-300 font-mono font-bold">{hs.score.toLocaleString()}</span>
+                      <div key={i} className="flex justify-between bg-white rounded-xl p-3 px-5 shadow-sm border border-slate-100">
+                        <span className="text-sky-800 font-bold">#{i+1} {hs.username}</span>
+                        <span className="text-pink-500 font-black">{hs.score.toLocaleString()}</span>
                       </div>
                     ))}
                   </div>
@@ -522,11 +539,11 @@ export default function App() {
               )}
 
               {!scoreSaved && (!score || score <= (highScores[0]?.score || 0)) ? (
-                 <div className="mb-6 text-center">
-                   <p className="text-indigo-300 font-medium text-sm mb-2">
-                     Você foi ótimo! Tente jogar novamente para bater o seu recorde de <span className="font-bold text-white">{highScores[0]?.score?.toLocaleString() || 0}</span> pontos!
+                 <div className="mb-6 text-center bg-sky-50 border-2 border-sky-100 rounded-2xl p-3 w-full">
+                   <p className="text-sky-700 font-bold text-sm mb-2">
+                     Você foi ótimo! Tente jogar novamente para bater o seu recorde de <span className="font-black text-pink-500">{highScores[0]?.score?.toLocaleString() || 0}</span> pontos!
                    </p>
-                   <p dir="rtl" className="text-indigo-300/80 text-xs">
+                   <p dir="rtl" className="text-sky-500 text-xs font-bold">
                      شما عالی بودید! برای شکستن رکورد خود دوباره بازی کنید!
                    </p>
                  </div>
@@ -534,35 +551,24 @@ export default function App() {
               
               <button 
                 onClick={() => startGame()}
-                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-emerald-500/30"
+                className="w-full py-4 bg-orange-400 hover:bg-orange-500 text-white rounded-[2rem] border-b-4 border-orange-600 font-black text-xl flex items-center justify-center gap-3 transition-transform hover:-translate-y-1 active:translate-y-0 shadow-lg"
               >
-                <RotateCcw /> 
+                <Play size={28} fill="currentColor" /> 
                 <div className="flex flex-col items-start leading-tight">
                   <span>JOGAR NOVAMENTE</span>
-                  <span dir="rtl" className="text-[10px] text-emerald-100 font-normal">دوباره بازی کنید</span>
+                  <span dir="rtl" className="text-[12px] text-orange-100 font-bold">دوباره بازی کنید</span>
                 </div>
               </button>
 
               <button 
                 onClick={() => setStatus('MENU')}
-                className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-[0.98] mt-3 border border-slate-600"
+                className="w-full py-3 bg-sky-100 hover:bg-sky-200 text-sky-700 rounded-[2rem] border-b-4 border-sky-300 font-black text-lg flex items-center justify-center gap-3 transition-transform hover:-translate-y-1 active:translate-y-0 mt-4"
               >
                 <div className="flex flex-col items-center leading-tight">
                   <span>VOLTAR AO MENU</span>
-                  <span dir="rtl" className="text-[10px] text-slate-300 font-normal mt-0.5">بازگشت به منو</span>
+                  <span dir="rtl" className="text-[12px] text-sky-500 font-bold mt-0.5">بازگشت به منو</span>
                 </div>
               </button>
-
-              <div className="mt-6 w-full text-center">
-                 <p className="text-xs text-slate-500 mb-2 border-t border-slate-700 pt-4">Placar Global (Futuro)</p>
-                 <div className="flex justify-between bg-slate-700/50 rounded-lg p-2 px-4 shadow-inner mt-2">
-                    <span className="text-slate-300 flex flex-col items-start leading-tight">
-                      <span>Sua Pontuação</span>
-                      <span dir="rtl" className="text-[10px] text-slate-400 mt-0.5">امتیاز شما</span>
-                    </span>
-                    <span className="text-indigo-300 font-mono font-bold flex items-center">{score.toLocaleString()}</span>
-                 </div>
-              </div>
             </div>
           </motion.div>
         )}
